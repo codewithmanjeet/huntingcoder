@@ -70,6 +70,7 @@ export default function Navbar() {
             display: block !important;
           }
         }
+          
 
         @media (min-width: 769px) {
           .hamburger {
