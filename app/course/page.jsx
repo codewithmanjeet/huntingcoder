@@ -18,10 +18,10 @@ export default function Blog() {
             marginBottom: "10px",
           }}
         >
-          Web Development Basics
+          Web Development Courses
         </h1>
         <p style={{ fontSize: "16px", color: "#6b7280" }}>
-          Learn the building blocks of modern websites
+          Start learning and upgrade your skills 🚀
         </p>
       </div>
 
@@ -34,29 +34,38 @@ export default function Blog() {
           margin: "0 auto",
         }}
       >
+        {/* ✅ HTML COURSE (AVAILABLE) */}
         <BlogCard
-          title="HTML (HyperText Markup Language)"
-          desc="HTML is the foundation of every website. It structures web content using headings, paragraphs, images and links. It is the skeleton of a webpage."
+          title="HTML (Available Course)"
+          desc="Agar aapko HTML ke basic notes chahiye, to aap ek short amount pay karke HTML ke complete basic notes buy kar sakte ho. Ye beginners ke liye perfect hai."
           date="HTML Basics"
+          buttonText="Buy Now 💰"
+          available={true}
         />
 
+        {/* ❌ CSS COURSE (COMING SOON) */}
         <BlogCard
-          title="CSS (Cascading Style Sheets)"
-          desc="CSS is used to design and style websites. It controls colors, layout, spacing, fonts and responsiveness."
+          title="CSS (Coming Soon)"
+          desc="CSS course abhi development me hai. Jaldi hi aapko advanced styling aur responsive design sikhne ko milega."
           date="CSS Styling"
+          buttonText="Coming Soon ⏳"
+          available={false}
         />
 
+        {/* ❌ JS COURSE (COMING SOON) */}
         <BlogCard
-          title="JavaScript (JS)"
-          desc="JavaScript adds interactivity to websites like sliders, popups, form validation and dynamic updates."
+          title="JavaScript (Coming Soon)"
+          desc="JavaScript course bhi jaldi launch hone wala hai jisme aap real-world interactivity aur logic building seekhoge."
           date="JavaScript Power"
+          buttonText="Coming Soon ⏳"
+          available={false}
         />
       </div>
     </main>
   );
 }
 
-function BlogCard({ title, desc, date }) {
+function BlogCard({ title, desc, date, buttonText, available }) {
   return (
     <div
       style={{
@@ -67,7 +76,7 @@ function BlogCard({ title, desc, date }) {
         transition: "all 0.3s ease",
         display: "flex",
         flexDirection: "column",
-        height: "100%",   // important
+        height: "100%",
       }}
       className="card"
     >
@@ -96,20 +105,22 @@ function BlogCard({ title, desc, date }) {
         {desc}
       </p>
 
-      {/* Button Always Bottom */}
+      {/* Button */}
       <button
+        disabled={!available}
         style={{
-          marginTop: "auto",   // 🔥 magic line
+          marginTop: "auto",
           padding: "10px 18px",
           borderRadius: "8px",
           border: "none",
-          backgroundColor: "#6366f1",
+          backgroundColor: available ? "#6366f1" : "#9ca3af",
           color: "#ffffff",
           fontSize: "14px",
-          cursor: "pointer",
+          cursor: available ? "pointer" : "not-allowed",
+          opacity: available ? 1 : 0.7,
         }}
       >
-        Read More →
+        {buttonText}
       </button>
 
       <style jsx>{`

@@ -1,22 +1,73 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [user, setUser] = useState(null);
+
+  // ✅ Get user
+  useEffect(() => {
+    const getUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      setUser(data.user);
+    };
+    getUser();
+
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setUser(session?.user || null);
+      }
+    );
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  // ✅ Login
+  const handleLogin = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+    });
+  };
+
+  // ✅ Logout
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
 
   return (
     <>
       <nav style={navStyle}>
-        {/* <h2 style={logoStyle}>Hunting_Coder73</h2> */}
         <h2 style={logoStyle}>manjeet_coder</h2>
 
         {/* Desktop Menu */}
         <div className="desktop-menu" style={desktopMenu}>
           <Link href="/" style={linkStyle}>Home</Link>
           <Link href="/about" style={linkStyle}>About</Link>
-          <Link href="/blog" style={linkStyle}>Blog</Link>
+          <Link href="/course" style={linkStyle}>Course</Link>
           <Link href="/contact" style={linkStyle}>Contact</Link>
+
+          {/* ✅ LOGIN / USER */}
+          {!user ? (
+            <button onClick={handleLogin} style={loginBtn}>
+              Login
+            </button>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <img
+                src={user.user_metadata?.avatar_url}
+                alt="profile"
+                style={{ width: "30px", height: "30px", borderRadius: "50%" }}
+              />
+              <span style={{ color: "#ffffff", fontSize: "14px" }}>
+                {user.user_metadata?.full_name}
+              </span>
+              <button onClick={handleLogout} style={loginBtn}>
+                Logout
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Hamburger Icon */}
@@ -35,17 +86,35 @@ export default function Navbar() {
         <Link href="/about" style={mobileLink} onClick={() => setMenuOpen(false)}>About</Link>
         <Link href="/blog" style={mobileLink} onClick={() => setMenuOpen(false)}>Blog</Link>
         <Link href="/contact" style={mobileLink} onClick={() => setMenuOpen(false)}>Contact</Link>
+
+        {/* ✅ MOBILE LOGIN */}
+        {!user ? (
+          <button onClick={handleLogin} style={mobileLoginBtn}>
+            Login
+          </button>
+        ) : (
+          <>
+            <img
+              src={user.user_metadata?.avatar_url}
+              style={{ width: "40px", borderRadius: "50%" }}
+            />
+            <p style={{ color: "#ffffff" }}>
+              {user.user_metadata?.full_name}
+            </p>
+            <button onClick={handleLogout} style={mobileLoginBtn}>
+              Logout
+            </button>
+          </>
+        )}
       </div>
 
       <style jsx>{`
-        /* Sticky Navbar */
         nav {
           position: fixed;
           top: 0;
           z-index: 1000;
         }
 
-        /* Mobile Menu Animation */
         .mobile-wrapper {
           background-color: #111827;
           display: flex;
@@ -62,7 +131,6 @@ export default function Navbar() {
           max-height: 300px;
         }
 
-        /* Responsive */
         @media (max-width: 768px) {
           .desktop-menu {
             display: none !important;
@@ -71,7 +139,6 @@ export default function Navbar() {
             display: block !important;
           }
         }
-          
 
         @media (min-width: 769px) {
           .hamburger {
@@ -85,6 +152,8 @@ export default function Navbar() {
     </>
   );
 }
+
+/* ✅ SAME STYLES (UNCHANGED) */
 
 const navStyle = {
   width: "100%",
@@ -105,6 +174,7 @@ const logoStyle = {
 const desktopMenu = {
   display: "flex",
   gap: "20px",
+  alignItems: "center",
 };
 
 const hamburgerStyle = {
@@ -127,4 +197,25 @@ const mobileLink = {
   textDecoration: "none",
   fontSize: "18px",
   padding: "5px 0",
+};
+
+const loginBtn = {
+  backgroundColor: "#6366f1",
+  color: "#ffffff",
+  padding: "8px 16px",
+  borderRadius: "6px",
+  textDecoration: "none",
+  fontSize: "14px",
+  border: "none",
+  cursor: "pointer",
+};
+
+const mobileLoginBtn = {
+  backgroundColor: "#6366f1",
+  color: "#ffffff",
+  padding: "10px",
+  borderRadius: "6px",
+  textAlign: "center",
+  border: "none",
+  cursor: "pointer",
 };
