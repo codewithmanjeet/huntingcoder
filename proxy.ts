@@ -1,16 +1,10 @@
-// proxy.ts  (root folder mein)
-
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function proxy(request: NextRequest) {
-  console.log('🔒 PROXY TRIGGERED for path:', request.nextUrl.pathname)
+  console.log('🔒 PROXY TRIGGERED:', request.nextUrl.pathname)
 
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  })
+  let response = NextResponse.next()
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -29,25 +23,21 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  const { data: { session } } = await supabase.auth.getSession()
+  // ✅ IMPORTANT FIX
+  const { data: { user } } = await supabase.auth.getUser()
 
-  // DEBUG LINES – yahan add kiya (session check ke baad)
-  console.log('Session in proxy:', session ? 'YES' : 'NO')
-  if (session) {
-    console.log('User email:', session.user.email)
-  }
+  console.log('User in proxy:', user ? user.email : 'NO USER')
 
-  // Dashboard protection
-  if (request.nextUrl.pathname.startsWith('/dashboard') && !session) {
-    console.log('🚫 No session → Redirecting to /login')
-    const loginUrl = new URL('/login', request.url)
-    return NextResponse.redirect(loginUrl)
+  // 🔐 Protect dashboard
+  if (request.nextUrl.pathname.startsWith('/dashboard') && !user) {
+    console.log('🚫 Not logged in → redirecting')
+    return NextResponse.redirect(new URL('/login', request.url))
   }
 
   return response
 }
 
-// Config – sirf dashboard protect kar raha hai
+// ✅ matcher sahi hai
 export const config = {
   matcher: ['/dashboard/:path*'],
 }
