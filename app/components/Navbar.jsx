@@ -43,7 +43,7 @@ export default function Navbar() {
   return (
     <>
       <nav style={navStyle}>
-        <h2 style={logoStyle}>manjeet_coder</h2>
+        <h2 style={logoStyle}>huntingcoder_73</h2>
 
         {/* Desktop Menu */}
         <div className="desktop-menu" style={desktopMenu}>
