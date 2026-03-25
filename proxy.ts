@@ -1,9 +1,9 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-export async function proxy(request: NextRequest) {
-  console.log('🔒 PROXY:', request.nextUrl.pathname)
+const ADMIN_EMAIL = "mdbhai01@gmail.com"; // 👈 same email
 
+export async function proxy(request: NextRequest) {
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -27,18 +27,33 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  console.log('👤 USER:', user?.email || 'NO USER')
+  const pathname = request.nextUrl.pathname
 
-  // 🔐 Protect dashboard
-  if (request.nextUrl.pathname.startsWith('/dashboard') && !user) {
+  console.log("PATH:", pathname)
+  console.log("USER:", user?.email)
+
+  // ❌ Not logged in
+  if (pathname.startsWith('/dashboard') && !user) {
     return NextResponse.redirect(new URL('/login', request.url))
+  }
+
+  // ❌ Not admin
+  if (pathname.startsWith('/dashboard') && user?.email !== ADMIN_EMAIL) {
+    return NextResponse.redirect(new URL('/', request.url))
+  }
+
+  // ❌ Admin already logged in → login page open nahi kare
+  if (pathname === '/login' && user?.email === ADMIN_EMAIL) {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
   return response
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*'],
+  matcher: ['/dashboard/:path*', '/login'],
 }

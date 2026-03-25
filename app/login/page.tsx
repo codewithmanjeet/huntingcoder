@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+
+const ADMIN_EMAIL = "mdbhai01@gmail.com"; // 👈 apna admin email daalo
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -9,23 +11,53 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
+  // ✅ Agar admin already login hai → direct dashboard
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data } = await supabase.auth.getUser();
+
+      if (data.user?.email === ADMIN_EMAIL) {
+        window.location.href = "/dashboard";
+      }
+    };
+
+    checkUser();
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setErrorMsg("");
 
-    const { error } = await supabase.auth.signInWithPassword({
+    // ❌ Admin email check (FIRST SECURITY)
+    if (email !== ADMIN_EMAIL) {
+      setErrorMsg("❌ Only Admin can login");
+      setLoading(false);
+      return;
+    }
+
+    // ✅ Login
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
       setErrorMsg(error.message || "Wrong email or password");
-    } else {
-      window.location.href = "/dashboard";
+      setLoading(false);
+      return;
     }
 
-    setLoading(false);
+    // ❌ Double check (SECOND SECURITY)
+    if (data.user?.email !== ADMIN_EMAIL) {
+      await supabase.auth.signOut();
+      setErrorMsg("❌ Access Denied");
+      setLoading(false);
+      return;
+    }
+
+    // ✅ SUCCESS
+    window.location.href = "/dashboard";
   };
 
   return (
@@ -33,7 +65,14 @@ export default function Login() {
       <div style={cardStyle}>
         <h1 style={headingStyle}>HuntingCoder Admin Login</h1>
 
-        <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+        <form
+          onSubmit={handleLogin}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "20px",
+          }}
+        >
           <div>
             <label style={labelStyle}>Email</label>
             <input
@@ -67,7 +106,6 @@ export default function Login() {
   );
 }
 
-// Styles
 const mainStyle = {
   minHeight: "100vh",
   backgroundColor: "#f9fafb",
@@ -129,4 +167,3 @@ const errorStyle = {
   marginTop: "12px",
   fontSize: "14px",
 };
-
