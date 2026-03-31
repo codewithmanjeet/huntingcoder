@@ -1,6 +1,52 @@
 "use client";
 
 export default function Blog() {
+  // ✅ Payment Function
+  const handlePayment = async () => {
+    try {
+      const res = await fetch("/api/create-order", {
+        method: "POST",
+      });
+
+      const data = await res.json();
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY,
+        amount: data.amount,
+        currency: "INR",
+        order_id: data.id,
+
+        handler: async function (response) {
+          const verify = await fetch("/api/verify-payment", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              ...response,
+              course: "HTML",
+            }),
+          });
+
+          const result = await verify.json();
+
+          if (result.success) {
+            alert("Payment Successful ✅");
+            window.location.href = "/download";
+          } else {
+            alert("Payment Failed ❌");
+          }
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch (err) {
+      console.log(err);
+      alert("Something went wrong ❌");
+    }
+  };
+
   return (
     <main
       style={{
@@ -34,28 +80,29 @@ export default function Blog() {
           margin: "0 auto",
         }}
       >
-        {/* ✅ HTML COURSE (AVAILABLE) */}
+        {/* ✅ HTML COURSE */}
         <BlogCard
           title="HTML (Available Course)"
-          desc="Agar aapko HTML ke basic notes chahiye, to aap ek short amount pay karke HTML ke complete basic notes buy kar sakte ho. Ye beginners ke liye perfect hai."
+          desc="Agar aapko HTML ke basic notes chahiye, to aap ek short amount pay karke HTML ke complete basic notes buy kar sakte ho."
           date="HTML Basics"
           buttonText="Buy Now 💰"
           available={true}
+          onClick={handlePayment} // ✅ yaha connect kiya
         />
 
-        {/* ❌ CSS COURSE (COMING SOON) */}
+        {/* ❌ CSS */}
         <BlogCard
           title="CSS (Coming Soon)"
-          desc="CSS course abhi development me hai. Jaldi hi aapko advanced styling aur responsive design sikhne ko milega."
+          desc="CSS course abhi development me hai."
           date="CSS Styling"
           buttonText="Coming Soon ⏳"
           available={false}
         />
 
-        {/* ❌ JS COURSE (COMING SOON) */}
+        {/* ❌ JS */}
         <BlogCard
           title="JavaScript (Coming Soon)"
-          desc="JavaScript course bhi jaldi launch hone wala hai jisme aap real-world interactivity aur logic building seekhoge."
+          desc="JavaScript course bhi jaldi launch hone wala hai."
           date="JavaScript Power"
           buttonText="Coming Soon ⏳"
           available={false}
@@ -65,7 +112,8 @@ export default function Blog() {
   );
 }
 
-function BlogCard({ title, desc, date, buttonText, available }) {
+// ✅ Blog Card Component
+function BlogCard({ title, desc, date, buttonText, available, onClick }) {
   return (
     <div
       style={{
@@ -105,8 +153,9 @@ function BlogCard({ title, desc, date, buttonText, available }) {
         {desc}
       </p>
 
-      {/* Button */}
+      {/* ✅ Button */}
       <button
+        onClick={available ? onClick : null} // 👈 important
         disabled={!available}
         style={{
           marginTop: "auto",

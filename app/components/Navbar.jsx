@@ -44,7 +44,7 @@ export default function Navbar() {
     <>
       <nav style={navStyle}>
         <h2 style={logoStyle}>huntingcoder_73</h2>
-
+ 
         {/* Desktop Menu */}
         <div className="desktop-menu" style={desktopMenu}>
           <Link href="/" style={linkStyle}>Home</Link>
