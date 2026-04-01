@@ -1,5 +1,3 @@
-import fs from "fs";
-import path from "path";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -7,51 +5,52 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-export async function GET(req) {
+export async function POST(req) {
+  try {
+    const authHeader = req.headers.get("authorization");
 
-  // ✅ 1. Get user (cookie/session)
-  const authHeader = req.headers.get("authorization");
+    if (!authHeader) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  if (!authHeader) {
-    return new Response("Login required", { status: 401 });
+    const token = authHeader.replace("Bearer ", "");
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser(token);
+
+    if (!user) {
+      return Response.json({ error: "Invalid user" }, { status: 401 });
+    }
+
+    const { course } = await req.json();
+
+    // 🔒 payment check
+    const { data } = await supabase
+      .from("payments")
+      .select("*")
+      .eq("user_email", user.email)
+      .eq("course", course);
+
+    if (!data || data.length === 0) {
+      return Response.json({ error: "Not purchased" }, { status: 403 });
+    }
+
+    // 🔥 FIXED SIGNED URL
+    const { data: fileData, error } = await supabase.storage
+      .from("courses")
+      .createSignedUrl("courses.zip", 60); // ✅ FIX
+
+    if (error) {
+      return Response.json({ error: "File error" }, { status: 500 });
+    }
+
+    return Response.json({
+      success: true,
+      url: fileData.signedUrl,
+    });
+
+  } catch (err) {
+    return Response.json({ error: "Server error" }, { status: 500 });
   }
-
-  const token = authHeader.replace("Bearer ", "");
-
-  const { data: userData, error } = await supabase.auth.getUser(token);
-
-  if (!userData?.user) {
-    return new Response("Invalid user", { status: 401 });
-  }
-
-  const email = userData.user.email;
-
-  // ✅ 2. Check payment
-  const { data: payment } = await supabase
-    .from("payments")
-    .select("*")
-    .eq("user_email", email)
-    .eq("course", "HTML")
-    .single();
-
-  if (!payment) {
-    return new Response("Payment required", { status: 403 });
-  }
-
-  // ✅ 3. Private file path
-  const filePath = path.join(
-    process.cwd(),
-    "private",
-    "course.zip"
-  );
-
-  // ✅ 4. File read
-  const fileBuffer = fs.readFileSync(filePath);
-
-  return new Response(fileBuffer, {
-    headers: {
-      "Content-Type": "application/zip",
-      "Content-Disposition": "attachment; filename=course.zip",
-    },
-  });
 }
