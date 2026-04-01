@@ -53,21 +53,39 @@ export async function POST(req) {
       .digest("hex");
 
     if (expectedSign !== razorpay_signature) {
-      return Response.json({ error: "Payment failed" }, { status: 400 });
+      return Response.json({ error: "Payment verification failed" }, { status: 400 });
     }
 
-    // 🔒 duplicate check
-    const { data: existing } = await supabase
+    // 🔒 duplicate payment check
+    const { data: existing, error: existingError } = await supabase
       .from("payments")
       .select("*")
       .eq("payment_id", razorpay_payment_id);
 
-    if (existing.length > 0) {
-      return Response.json({ success: true });
+    if (existingError) {
+      return Response.json({ error: "DB error" }, { status: 500 });
     }
 
-    // 💾 save
-    await supabase.from("payments").insert([
+    if (existing && existing.length > 0) {
+      return Response.json({ success: true, message: "Already saved" });
+    }
+
+    // 🔥 same course already purchased check
+    const { data: alreadyBought } = await supabase
+      .from("payments")
+      .select("*")
+      .eq("user_email", user.email)
+      .eq("course", course);
+
+    if (alreadyBought && alreadyBought.length > 0) {
+      return Response.json({
+        success: true,
+        message: "Course already purchased",
+      });
+    }
+
+    // 💾 save payment
+    const { error: insertError } = await supabase.from("payments").insert([
       {
         user_email: user.email,
         course,
@@ -75,7 +93,14 @@ export async function POST(req) {
       },
     ]);
 
-    return Response.json({ success: true });
+    if (insertError) {
+      return Response.json({ error: "Save failed" }, { status: 500 });
+    }
+
+    return Response.json({
+      success: true,
+      message: "Payment verified & saved",
+    });
 
   } catch (err) {
     return Response.json({ error: "Server error" }, { status: 500 });
