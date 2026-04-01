@@ -34,7 +34,6 @@ export async function POST(req) {
       course,
     } = body;
 
-    // 🔒 validation
     if (
       !razorpay_order_id ||
       !razorpay_payment_id ||
@@ -44,7 +43,6 @@ export async function POST(req) {
       return Response.json({ error: "Invalid data" }, { status: 400 });
     }
 
-    // 🔐 signature verify
     const sign = razorpay_order_id + "|" + razorpay_payment_id;
 
     const expectedSign = crypto
@@ -53,13 +51,16 @@ export async function POST(req) {
       .digest("hex");
 
     if (expectedSign !== razorpay_signature) {
-      return Response.json({ error: "Payment verification failed" }, { status: 400 });
+      return Response.json(
+        { error: "Payment verification failed" },
+        { status: 400 }
+      );
     }
 
     // 🔒 duplicate payment check
     const { data: existing, error: existingError } = await supabase
       .from("payments")
-      .select("*")
+      .select("id")
       .eq("payment_id", razorpay_payment_id);
 
     if (existingError) {
@@ -70,12 +71,16 @@ export async function POST(req) {
       return Response.json({ success: true, message: "Already saved" });
     }
 
-    // 🔥 same course already purchased check
-    const { data: alreadyBought } = await supabase
+    // 🔥 already purchased check
+    const { data: alreadyBought, error: alreadyError } = await supabase
       .from("payments")
-      .select("*")
+      .select("id")
       .eq("user_email", user.email)
       .eq("course", course);
+
+    if (alreadyError) {
+      return Response.json({ error: "DB error" }, { status: 500 });
+    }
 
     if (alreadyBought && alreadyBought.length > 0) {
       return Response.json({
@@ -84,7 +89,7 @@ export async function POST(req) {
       });
     }
 
-    // 💾 save payment
+    // 💾 save
     const { error: insertError } = await supabase.from("payments").insert([
       {
         user_email: user.email,
@@ -103,6 +108,7 @@ export async function POST(req) {
     });
 
   } catch (err) {
+    console.error(err); // 🔥 DEBUG
     return Response.json({ error: "Server error" }, { status: 500 });
   }
 }
