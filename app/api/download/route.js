@@ -2,11 +2,12 @@ import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY // 🔥 server only
+  process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
 export async function POST(req) {
   try {
+    // 🔐 AUTH CHECK
     const authHeader = req.headers.get("authorization");
 
     if (!authHeader) {
@@ -15,7 +16,6 @@ export async function POST(req) {
 
     const token = authHeader.replace("Bearer ", "");
 
-    // ✅ user verify
     const {
       data: { user },
       error: userError,
@@ -25,44 +25,43 @@ export async function POST(req) {
       return Response.json({ error: "Invalid user" }, { status: 401 });
     }
 
+    // 📦 BODY
     const { course } = await req.json();
 
     if (!course) {
       return Response.json({ error: "Course required" }, { status: 400 });
     }
 
-    // ✅ check purchase
+    // ✅ PURCHASE CHECK (FIXED)
     const { data, error } = await supabase
-      .from("payments")
-      .select("*")
+      .from("purchases") // ✅ NO SPACE
+      .select("id")
       .eq("user_email", user.email)
       .eq("course", course)
-      .single();
+      .maybeSingle();
 
     if (error || !data) {
-      return Response.json(
-        { error: "You have not purchased this course" },
-        { status: 403 }
-      );
+      return Response.json({ error: "Not purchased" }, { status: 403 });
     }
 
-    // 🔥 signed URL generate (SECURE)
-    const { data: signedUrlData, error: urlError } =
-      await supabase.storage
-        .from("courses")
-        .createSignedUrl("course.zip", 60); // 60 sec valid
+    // 🔥 DYNAMIC FILE (IMPORTANT)
+    const filePath = `${course}.zip`;
 
-    if (urlError) {
-      return Response.json({ error: "URL error" }, { status: 500 });
+    // 🔐 SIGNED URL
+    const { data: urlData, error: urlError } = await supabase.storage
+      .from("courses")
+      .createSignedUrl(filePath, 60);
+
+    if (urlError || !urlData) {
+      return Response.json({ error: "File not found" }, { status: 404 });
     }
 
     return Response.json({
-      success: true,
-      url: signedUrlData.signedUrl,
+      url: urlData.signedUrl,
     });
 
   } catch (err) {
-    console.error(err);
+    console.error("Download API Error:", err);
     return Response.json({ error: "Server error" }, { status: 500 });
   }
 }
