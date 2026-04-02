@@ -1,9 +1,47 @@
 "use client";
 
 export default function Blog() {
-  // ✅ Payment Function
+
+  // 🔥 DOWNLOAD FUNCTION (ADD KIYA)
+  const downloadCourse = async () => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      alert("Please login first ❌");
+      return;
+    }
+
+    const res = await fetch("/api/download", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        course: "HTML",
+      }),
+    });
+
+    const data = await res.json();
+
+    if (data.url) {
+      window.location.href = data.url; // 🔥 download start
+    } else {
+      alert(data.error);
+    }
+  };
+
+
+  // ✅ PAYMENT FUNCTION (UPDATED)
   const handlePayment = async () => {
     try {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        alert("Please login first ❌");
+        return;
+      }
+
       const res = await fetch("/api/create-order", {
         method: "POST",
       });
@@ -17,10 +55,13 @@ export default function Blog() {
         order_id: data.id,
 
         handler: async function (response) {
+
+          // 🔥 VERIFY PAYMENT WITH TOKEN
           const verify = await fetch("/api/verify-payment", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`, // ✅ IMPORTANT
             },
             body: JSON.stringify({
               ...response,
@@ -32,7 +73,10 @@ export default function Blog() {
 
           if (result.success) {
             alert("Payment Successful ✅");
-            window.location.href = "/download";
+
+            // 🔥 DIRECT DOWNLOAD
+            downloadCourse();
+
           } else {
             alert("Payment Failed ❌");
           }
@@ -41,11 +85,14 @@ export default function Blog() {
 
       const rzp = new window.Razorpay(options);
       rzp.open();
+
     } catch (err) {
       console.log(err);
       alert("Something went wrong ❌");
     }
   };
+
+
 
   return (
     <main
@@ -87,7 +134,7 @@ export default function Blog() {
           date="HTML Basics"
           buttonText="Buy Now 💰"
           available={true}
-          onClick={handlePayment} // ✅ yaha connect kiya
+          onClick={handlePayment}
         />
 
         {/* ❌ CSS */}
@@ -111,6 +158,7 @@ export default function Blog() {
     </main>
   );
 }
+
 
 // ✅ Blog Card Component
 function BlogCard({ title, desc, date, buttonText, available, onClick }) {
@@ -153,9 +201,8 @@ function BlogCard({ title, desc, date, buttonText, available, onClick }) {
         {desc}
       </p>
 
-      {/* ✅ Button */}
       <button
-        onClick={available ? onClick : null} // 👈 important
+        onClick={available ? onClick : null}
         disabled={!available}
         style={{
           marginTop: "auto",

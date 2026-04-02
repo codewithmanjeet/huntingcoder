@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
+  process.env.SUPABASE_SERVICE_ROLE_KEY // 🔥 server only
 );
 
 export async function POST(req) {
@@ -15,42 +15,54 @@ export async function POST(req) {
 
     const token = authHeader.replace("Bearer ", "");
 
+    // ✅ user verify
     const {
       data: { user },
+      error: userError,
     } = await supabase.auth.getUser(token);
 
-    if (!user) {
+    if (userError || !user) {
       return Response.json({ error: "Invalid user" }, { status: 401 });
     }
 
     const { course } = await req.json();
 
-    // 🔒 payment check
-    const { data } = await supabase
+    if (!course) {
+      return Response.json({ error: "Course required" }, { status: 400 });
+    }
+
+    // ✅ check purchase
+    const { data, error } = await supabase
       .from("payments")
       .select("*")
       .eq("user_email", user.email)
-      .eq("course", course);
+      .eq("course", course)
+      .single();
 
-    if (!data || data.length === 0) {
-      return Response.json({ error: "Not purchased" }, { status: 403 });
+    if (error || !data) {
+      return Response.json(
+        { error: "You have not purchased this course" },
+        { status: 403 }
+      );
     }
 
-    // 🔥 FIXED SIGNED URL
-    const { data: fileData, error } = await supabase.storage
-      .from("courses")
-      .createSignedUrl("courses.zip", 60); // ✅ FIX
+    // 🔥 signed URL generate (SECURE)
+    const { data: signedUrlData, error: urlError } =
+      await supabase.storage
+        .from("courses")
+        .createSignedUrl("course.zip", 60); // 60 sec valid
 
-    if (error) {
-      return Response.json({ error: "File error" }, { status: 500 });
+    if (urlError) {
+      return Response.json({ error: "URL error" }, { status: 500 });
     }
 
     return Response.json({
       success: true,
-      url: fileData.signedUrl,
+      url: signedUrlData.signedUrl,
     });
 
   } catch (err) {
+    console.error(err);
     return Response.json({ error: "Server error" }, { status: 500 });
   }
 }
