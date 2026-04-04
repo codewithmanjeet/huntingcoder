@@ -2,11 +2,11 @@ import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export async function POST(req) {
+export async function POST(req: Request) {
   try {
     const authHeader = req.headers.get("authorization");
 
@@ -43,11 +43,10 @@ export async function POST(req) {
       return Response.json({ error: "Invalid data" }, { status: 400 });
     }
 
-    const sign = razorpay_order_id + "|" + razorpay_payment_id;
-
+    // ✅ SIGN VERIFY
     const expectedSign = crypto
-      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-      .update(sign)
+      .createHmac("sha256", process.env.RAZORPAY_SECRET!)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
       .digest("hex");
 
     if (expectedSign !== razorpay_signature) {
@@ -57,39 +56,33 @@ export async function POST(req) {
       );
     }
 
-    // 🔒 duplicate payment check
-    const { data: existing, error: existingError } = await supabase
-      .from("purchases") 
+    // 🔒 DUPLICATE PAYMENT CHECK
+    const { data: existing } = await supabase
+      .from("purchases")
       .select("id")
-      .eq("payment_id", razorpay_payment_id);
+      .eq("payment_id", razorpay_payment_id)
+      .maybeSingle();
 
-    if (existingError) {
-      return Response.json({ error: "DB error" }, { status: 500 });
-    }
-
-    if (existing && existing.length > 0) {
+    if (existing) {
       return Response.json({ success: true, message: "Already saved" });
     }
 
-    // 🔥 already purchased check
-    const { data: alreadyBought, error: alreadyError } = await supabase
+    // 🔥 ALREADY PURCHASED CHECK
+    const { data: alreadyBought } = await supabase
       .from("purchases")
       .select("id")
       .eq("user_email", user.email)
-      .eq("course", course);
+      .eq("course", course)
+      .maybeSingle();
 
-    if (alreadyError) {
-      return Response.json({ error: "DB error" }, { status: 500 });
-    }
-
-    if (alreadyBought && alreadyBought.length > 0) {
+    if (alreadyBought) {
       return Response.json({
         success: true,
         message: "Course already purchased",
       });
     }
 
-    // 💾 save
+    // 💾 SAVE
     const { error: insertError } = await supabase.from("purchases").insert([
       {
         user_email: user.email,
@@ -106,9 +99,8 @@ export async function POST(req) {
       success: true,
       message: "Payment verified & saved",
     });
-
   } catch (err) {
-    console.error(err); // 🔥 DEBUG
+    console.error(err);
     return Response.json({ error: "Server error" }, { status: 500 });
   }
 }
