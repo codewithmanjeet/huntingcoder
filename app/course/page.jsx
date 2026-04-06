@@ -5,7 +5,6 @@ import { createBrowserClient } from "@supabase/ssr";
 
 export default function CoursePage() {
 
-  // ✅ NEW SUPABASE CLIENT
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -33,11 +32,13 @@ export default function CoursePage() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  // 🔥 DOWNLOAD FUNCTION (SECURE)
+  // 🔥 DOWNLOAD FUNCTION
   const downloadCourse = async () => {
     const {
       data: { session },
     } = await supabase.auth.getSession();
+
+    console.log("DOWNLOAD TOKEN:", session?.access_token); // ✅ DEBUG
 
     if (!session) {
       alert("Please login first ❌");
@@ -56,6 +57,8 @@ export default function CoursePage() {
     });
 
     const data = await res.json();
+
+    console.log("DOWNLOAD RESPONSE:", data); // ✅ DEBUG
 
     if (data.url) {
       window.location.href = data.url;
@@ -85,9 +88,18 @@ export default function CoursePage() {
         order_id: data.id,
 
         handler: async function (response) {
+
           const {
             data: { session },
           } = await supabase.auth.getSession();
+
+          // ✅ 🔥 TOKEN LOG YAHAN ADD KIYA
+          console.log("VERIFY TOKEN:", session?.access_token);
+
+          if (!session) {
+            alert("Session expired ❌");
+            return;
+          }
 
           const verify = await fetch("/api/verify-payment", {
             method: "POST",
@@ -102,7 +114,8 @@ export default function CoursePage() {
           });
 
           const result = await verify.json();
-          console.log("VERIFY RESPONSE:", result);
+
+          console.log("VERIFY RESPONSE:", result); // ✅ DEBUG
 
           if (result.success) {
             alert("Payment Successful ✅");

@@ -5,52 +5,59 @@ export async function POST(req) {
   try {
     const body = await req.json();
 
-    const token = req.headers.get("authorization")?.split(" ")[1];
+    const authHeader = req.headers.get("authorization");
 
-    if (!token) {
+    if (!authHeader) {
       return Response.json({ success: false, error: "No token" });
     }
+
+    const token = authHeader.split(" ")[1];
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // ✅ GET USER
+    // ✅ USER GET
     const {
       data: { user },
-      error: userError,
+      error,
     } = await supabase.auth.getUser(token);
 
-    if (userError || !user) {
+    if (error || !user) {
       return Response.json({ success: false, error: "User not found" });
     }
 
     // ✅ SIGNATURE VERIFY
-    const generated_signature = crypto
+    const sign = crypto
       .createHmac("sha256", process.env.RAZORPAY_SECRET_KEY)
       .update(body.razorpay_order_id + "|" + body.razorpay_payment_id)
       .digest("hex");
 
-    if (generated_signature !== body.razorpay_signature) {
+    if (sign !== body.razorpay_signature) {
       return Response.json({ success: false, error: "Invalid signature" });
     }
 
-    // ✅ INSERT (UPDATED ACCORDING TO YOUR TABLE)
-    const { error: insertError } = await supabase.from("purchases").insert({
-      user_email: user.email, // 🔥 IMPORTANT CHANGE
-      course: body.course,
-      payment_id: body.razorpay_payment_id,
-    });
+    // ✅ INSERT
+    const { error: insertError } = await supabase
+      .from("purchases")
+      .insert({
+        user_email: user.email,
+        course: body.course,
+        payment_id: body.razorpay_payment_id,
+      });
 
     if (insertError) {
-      return Response.json({ success: false, error: insertError.message });
+      return Response.json({
+        success: false,
+        error: insertError.message,
+      });
     }
 
     return Response.json({ success: true });
 
   } catch (err) {
-    console.log(err);
+    console.log("VERIFY ERROR:", err);
     return Response.json({ success: false, error: err.message });
   }
 }

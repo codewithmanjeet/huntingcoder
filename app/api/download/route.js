@@ -2,11 +2,13 @@ import { createClient } from "@supabase/supabase-js";
 
 export async function POST(req) {
   try {
-    const token = req.headers.get("authorization")?.split(" ")[1];
+    const authHeader = req.headers.get("authorization");
 
-    if (!token) {
+    if (!authHeader) {
       return Response.json({ error: "No token" });
     }
+
+    const token = authHeader.split(" ")[1];
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -23,26 +25,25 @@ export async function POST(req) {
 
     const { course } = await req.json();
 
-    // ✅ CHECK PURCHASE USING EMAIL
     const { data } = await supabase
       .from("purchases")
       .select("*")
-      .eq("user_email", user.email) // 🔥 IMPORTANT CHANGE
+      .eq("user_email", user.email)
       .eq("course", course)
       .single();
 
     if (!data) {
-      return Response.json({ error: "Not purchased ❌" });
+      return Response.json({ error: "Not purchased" });
     }
 
     const { data: file } = await supabase.storage
       .from("courses")
-      .createSignedUrl("course/courses.zip", 60);
+      .createSignedUrl("course/html-course.zip", 60);
 
     return Response.json({ url: file.signedUrl });
 
   } catch (err) {
-    console.log(err);
+    console.log("DOWNLOAD ERROR:", err);
     return Response.json({ error: "Server error" });
   }
 }
