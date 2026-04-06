@@ -5,6 +5,8 @@ export async function POST(req) {
   try {
     const body = await req.json();
 
+    console.log("BODY:", body);
+
     const authHeader = req.headers.get("authorization");
 
     if (!authHeader) {
@@ -18,7 +20,6 @@ export async function POST(req) {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // ✅ USER GET
     const {
       data: { user },
       error,
@@ -28,24 +29,27 @@ export async function POST(req) {
       return Response.json({ success: false, error: "User not found" });
     }
 
-    // ✅ SIGNATURE VERIFY
-    const sign = crypto
-      .createHmac("sha256", process.env.RAZORPAY_SECRET_KEY)
+    // 🔥 IMPORTANT FIX (ENV NAME CHANGE)
+    const generated_signature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_SECRET) // ✅ FIXED
       .update(body.razorpay_order_id + "|" + body.razorpay_payment_id)
       .digest("hex");
 
-    if (sign !== body.razorpay_signature) {
-      return Response.json({ success: false, error: "Invalid signature" });
+    console.log("GENERATED:", generated_signature);
+    console.log("RECEIVED:", body.razorpay_signature);
+
+    if (generated_signature !== body.razorpay_signature) {
+      return Response.json({
+        success: false,
+        error: "Signature mismatch ❌",
+      });
     }
 
-    // ✅ INSERT
-    const { error: insertError } = await supabase
-      .from("purchases")
-      .insert({
-        user_email: user.email,
-        course: body.course,
-        payment_id: body.razorpay_payment_id,
-      });
+    const { error: insertError } = await supabase.from("purchases").insert({
+      user_email: user.email,
+      course: body.course,
+      payment_id: body.razorpay_payment_id,
+    });
 
     if (insertError) {
       return Response.json({
