@@ -29,21 +29,21 @@ export async function POST(req) {
       .from("purchases")
       .select("*")
       .eq("user_email", user.email)
-      .eq("course", course)
-      .single();
+      .eq("course", course);
 
-    if (!data) {
-      return Response.json({ error: "Not purchased" });
+    if (!data || data.length === 0) {
+      return Response.json({ error: "Not purchased ❌" });
     }
 
+    // ✅ FINAL CORRECT FILE PATH
     const { data: file } = await supabase.storage
       .from("courses")
-      .createSignedUrl("course/html-course.zip", 60);
+      .createSignedUrl("course.zip", 60);
 
     return Response.json({ url: file.signedUrl });
 
   } catch (err) {
     console.log("DOWNLOAD ERROR:", err);
-    return Response.json({ error: "Server error" });
+    return Response.json({ error: err.message });
   }
 }
