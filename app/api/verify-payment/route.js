@@ -11,20 +11,10 @@ export async function POST(req) {
 
   const token = req.headers.get("authorization")?.split(" ")[1];
 
-  if (!token) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  // 🔥 USER GET
   const {
     data: { user },
   } = await supabase.auth.getUser(token);
 
-  if (!user) {
-    return Response.json({ error: "Invalid user" }, { status: 401 });
-  }
-
-  // 🔥 SIGNATURE VERIFY
   const generated_signature = crypto
     .createHmac("sha256", process.env.RAZORPAY_SECRET_KEY)
     .update(body.razorpay_order_id + "|" + body.razorpay_payment_id)
@@ -34,7 +24,6 @@ export async function POST(req) {
     return Response.json({ success: false });
   }
 
-  // 🔥 SAVE PURCHASE
   await supabase.from("purchases").insert({
     user_id: user.id,
     course: body.course,

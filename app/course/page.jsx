@@ -1,12 +1,45 @@
 "use client";
 
-export default function Blog() {
+import { useEffect, useState } from "react";
+import { createBrowserClient } from "@supabase/ssr";
 
-  // 🔥 DOWNLOAD FUNCTION (ADD KIYA)
+export default function CoursePage() {
+
+  // ✅ NEW SUPABASE CLIENT
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
+
+  const [user, setUser] = useState(null);
+
+  // ✅ LOGIN CHECK
+  useEffect(() => {
+    const getUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setUser(user);
+    };
+
+    getUser();
+
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setUser(session?.user || null);
+      }
+    );
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  // 🔥 DOWNLOAD FUNCTION (SECURE)
   const downloadCourse = async () => {
-    const token = localStorage.getItem("token");
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
-    if (!token) {
+    if (!session) {
       alert("Please login first ❌");
       return;
     }
@@ -15,7 +48,7 @@ export default function Blog() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${session.access_token}`,
       },
       body: JSON.stringify({
         course: "HTML",
@@ -25,23 +58,20 @@ export default function Blog() {
     const data = await res.json();
 
     if (data.url) {
-      window.location.href = data.url; // 🔥 download start
+      window.location.href = data.url;
     } else {
       alert(data.error);
     }
   };
 
-
-  // ✅ PAYMENT FUNCTION (UPDATED)
+  // 🔥 PAYMENT FUNCTION
   const handlePayment = async () => {
+    if (!user) {
+      alert("Login first ❌");
+      return;
+    }
+
     try {
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        alert("Please login first ❌");
-        return;
-      }
-
       const res = await fetch("/api/create-order", {
         method: "POST",
       });
@@ -55,13 +85,15 @@ export default function Blog() {
         order_id: data.id,
 
         handler: async function (response) {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
 
-          // 🔥 VERIFY PAYMENT WITH TOKEN
           const verify = await fetch("/api/verify-payment", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`, // ✅ IMPORTANT
+              Authorization: `Bearer ${session.access_token}`,
             },
             body: JSON.stringify({
               ...response,
@@ -73,10 +105,7 @@ export default function Blog() {
 
           if (result.success) {
             alert("Payment Successful ✅");
-
-            // 🔥 DIRECT DOWNLOAD
             downloadCourse();
-
           } else {
             alert("Payment Failed ❌");
           }
@@ -92,8 +121,6 @@ export default function Blog() {
     }
   };
 
-
-
   return (
     <main
       style={{
@@ -103,56 +130,19 @@ export default function Blog() {
       }}
     >
       <div style={{ textAlign: "center", marginBottom: "50px" }}>
-        <h1
-          style={{
-            fontSize: "44px",
-            fontWeight: "700",
-            color: "#111827",
-            marginBottom: "10px",
-          }}
-        >
-          Web Development Courses
+        <h1 style={{ fontSize: "40px", fontWeight: "bold" }}>
+          Web Development Courses 🚀
         </h1>
-        <p style={{ fontSize: "16px", color: "#6b7280" }}>
-          Start learning and upgrade your skills 🚀
-        </p>
+        <p>Start learning and upgrade your skills</p>
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-          gap: "30px",
-          maxWidth: "1200px",
-          margin: "0 auto",
-        }}
-      >
-        {/* ✅ HTML COURSE */}
+      <div style={{ maxWidth: "600px", margin: "0 auto" }}>
         <BlogCard
-          title="HTML (Available Course)"
-          desc="Agar aapko HTML ke basic notes chahiye, to aap ek short amount pay karke HTML ke complete basic notes buy kar sakte ho."
-          date="HTML Basics"
-          buttonText="Buy Now 💰"
-          available={true}
+          title="HTML Course"
+          desc="Complete HTML basic notes"
+          buttonText={user ? "Buy Now ₹1 💰" : "Login Required 🔒"}
+          available={!!user}
           onClick={handlePayment}
-        />
-
-        {/* ❌ CSS */}
-        <BlogCard
-          title="CSS (Coming Soon)"
-          desc="CSS course abhi development me hai."
-          date="CSS Styling"
-          buttonText="Coming Soon ⏳"
-          available={false}
-        />
-
-        {/* ❌ JS */}
-        <BlogCard
-          title="JavaScript (Coming Soon)"
-          desc="JavaScript course bhi jaldi launch hone wala hai."
-          date="JavaScript Power"
-          buttonText="Coming Soon ⏳"
-          available={false}
         />
       </div>
     </main>
@@ -160,70 +150,34 @@ export default function Blog() {
 }
 
 
-// ✅ Blog Card Component
-function BlogCard({ title, desc, date, buttonText, available, onClick }) {
+// ✅ CARD COMPONENT
+function BlogCard({ title, desc, buttonText, available, onClick }) {
   return (
     <div
       style={{
-        backgroundColor: "#ffffff",
-        borderRadius: "16px",
-        padding: "28px",
-        boxShadow: "0 10px 25px rgba(0,0,0,0.08)",
-        transition: "all 0.3s ease",
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
+        background: "#fff",
+        padding: "30px",
+        borderRadius: "10px",
+        boxShadow: "0 10px 20px rgba(0,0,0,0.1)",
       }}
-      className="card"
     >
-      <p style={{ fontSize: "14px", color: "#6366f1", marginBottom: "8px" }}>
-        {date}
-      </p>
-
-      <h2
-        style={{
-          fontSize: "22px",
-          fontWeight: "600",
-          color: "#111827",
-          marginBottom: "12px",
-        }}
-      >
-        {title}
-      </h2>
-
-      <p
-        style={{
-          fontSize: "16px",
-          color: "#4b5563",
-          lineHeight: "1.7",
-        }}
-      >
-        {desc}
-      </p>
+      <h2>{title}</h2>
+      <p>{desc}</p>
 
       <button
         onClick={available ? onClick : null}
         disabled={!available}
         style={{
-          marginTop: "auto",
-          padding: "10px 18px",
-          borderRadius: "8px",
+          marginTop: "20px",
+          padding: "10px 20px",
+          background: available ? "blue" : "gray",
+          color: "#fff",
           border: "none",
-          backgroundColor: available ? "#6366f1" : "#9ca3af",
-          color: "#ffffff",
-          fontSize: "14px",
           cursor: available ? "pointer" : "not-allowed",
-          opacity: available ? 1 : 0.7,
         }}
       >
         {buttonText}
       </button>
-
-      <style jsx>{`
-        .card:hover {
-          transform: translateY(-8px);
-        }
-      `}</style>
     </div>
   );
 }
