@@ -26,7 +26,7 @@ export async function POST(req) {
       return Response.json({ success: false, error: "User not found" });
     }
 
-    // ✅ VERIFY SIGNATURE
+    // ✅ SIGNATURE VERIFY
     const generated_signature = crypto
       .createHmac("sha256", process.env.RAZORPAY_SECRET_KEY)
       .update(body.razorpay_order_id + "|" + body.razorpay_payment_id)
@@ -36,9 +36,9 @@ export async function POST(req) {
       return Response.json({ success: false, error: "Invalid signature" });
     }
 
-    // ✅ SAVE TO DB
+    // ✅ INSERT (UPDATED ACCORDING TO YOUR TABLE)
     const { error: insertError } = await supabase.from("purchases").insert({
-      user_id: user.id,
+      user_email: user.email, // 🔥 IMPORTANT CHANGE
       course: body.course,
       payment_id: body.razorpay_payment_id,
     });
@@ -51,6 +51,6 @@ export async function POST(req) {
 
   } catch (err) {
     console.log(err);
-    return Response.json({ success: false, error: "Server error" });
+    return Response.json({ success: false, error: err.message });
   }
 }

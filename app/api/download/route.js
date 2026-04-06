@@ -15,23 +15,23 @@ export async function POST(req) {
 
     const {
       data: { user },
-      error: userError,
     } = await supabase.auth.getUser(token);
 
-    if (userError || !user) {
+    if (!user) {
       return Response.json({ error: "User not found" });
     }
 
     const { course } = await req.json();
 
-    const { data, error } = await supabase
+    // ✅ CHECK PURCHASE USING EMAIL
+    const { data } = await supabase
       .from("purchases")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_email", user.email) // 🔥 IMPORTANT CHANGE
       .eq("course", course)
       .single();
 
-    if (error || !data) {
+    if (!data) {
       return Response.json({ error: "Not purchased ❌" });
     }
 
