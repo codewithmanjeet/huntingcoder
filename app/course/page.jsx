@@ -102,6 +102,7 @@ export default function CoursePage() {
           });
 
           const result = await verify.json();
+          console.log("VERIFY RESPONSE:", result);
 
           if (result.success) {
             alert("Payment Successful ✅");

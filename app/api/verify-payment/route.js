@@ -1,34 +1,56 @@
 import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
-
 export async function POST(req) {
-  const body = await req.json();
+  try {
+    const body = await req.json();
 
-  const token = req.headers.get("authorization")?.split(" ")[1];
+    const token = req.headers.get("authorization")?.split(" ")[1];
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser(token);
+    if (!token) {
+      return Response.json({ success: false, error: "No token" });
+    }
 
-  const generated_signature = crypto
-    .createHmac("sha256", process.env.RAZORPAY_SECRET_KEY)
-    .update(body.razorpay_order_id + "|" + body.razorpay_payment_id)
-    .digest("hex");
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
 
-  if (generated_signature !== body.razorpay_signature) {
-    return Response.json({ success: false });
+    // ✅ GET USER
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser(token);
+
+    if (userError || !user) {
+      return Response.json({ success: false, error: "User not found" });
+    }
+
+    // ✅ VERIFY SIGNATURE
+    const generated_signature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_SECRET_KEY)
+      .update(body.razorpay_order_id + "|" + body.razorpay_payment_id)
+      .digest("hex");
+
+    if (generated_signature !== body.razorpay_signature) {
+      return Response.json({ success: false, error: "Invalid signature" });
+    }
+
+    // ✅ SAVE TO DB
+    const { error: insertError } = await supabase.from("purchases").insert({
+      user_id: user.id,
+      course: body.course,
+      payment_id: body.razorpay_payment_id,
+    });
+
+    if (insertError) {
+      return Response.json({ success: false, error: insertError.message });
+    }
+
+    return Response.json({ success: true });
+
+  } catch (err) {
+    console.log(err);
+    return Response.json({ success: false, error: "Server error" });
   }
-
-  await supabase.from("purchases").insert({
-    user_id: user.id,
-    course: body.course,
-    payment_id: body.razorpay_payment_id,
-  });
-
-  return Response.json({ success: true });
 }
