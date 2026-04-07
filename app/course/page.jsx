@@ -87,7 +87,7 @@ export default function CoursePage() {
       >
         <CourseCard
           title="HTML Course"
-          desc="Learn HTML from scratch with real projects"
+          desc="You can make a small payment of just ₹1 to download a basic HTML cheat sheet in a ZIP file. Inside, you will also find some images from which you can learn HTML."
           price="₹1"
           active={true}
           user={user}
