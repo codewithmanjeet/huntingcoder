@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 
 export default function CoursePage() {
-
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -38,8 +37,6 @@ export default function CoursePage() {
       data: { session },
     } = await supabase.auth.getSession();
 
-    console.log("DOWNLOAD TOKEN:", session?.access_token); // ✅ DEBUG
-
     if (!session) {
       alert("Please login first ❌");
       return;
@@ -58,8 +55,6 @@ export default function CoursePage() {
 
     const data = await res.json();
 
-    console.log("DOWNLOAD RESPONSE:", data); // ✅ DEBUG
-
     if (data.url) {
       window.location.href = data.url;
     } else {
@@ -74,123 +69,141 @@ export default function CoursePage() {
       return;
     }
 
-    try {
-      const res = await fetch("/api/create-order", {
-        method: "POST",
-      });
+    const res = await fetch("/api/create-order", {
+      method: "POST",
+    });
 
-      const data = await res.json();
+    const data = await res.json();
 
-      const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY,
-        amount: data.amount,
-        currency: "INR",
-        order_id: data.id,
+    const options = {
+      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY,
+      amount: data.amount,
+      currency: "INR",
+      order_id: data.id,
 
-        handler: async function (response) {
+      handler: async function (response) {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
-          const {
-            data: { session },
-          } = await supabase.auth.getSession();
+        if (!session) {
+          alert("Session expired ❌");
+          return;
+        }
 
-          // ✅ 🔥 TOKEN LOG YAHAN ADD KIYA
-          console.log("VERIFY TOKEN:", session?.access_token);
+        const verify = await fetch("/api/verify-payment", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            ...response,
+            course: "HTML",
+          }),
+        });
 
-          if (!session) {
-            alert("Session expired ❌");
-            return;
-          }
+        const result = await verify.json();
 
-          const verify = await fetch("/api/verify-payment", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${session.access_token}`,
-            },
-            body: JSON.stringify({
-              ...response,
-              course: "HTML",
-            }),
-          });
+        if (result.success) {
+          alert("Payment Successful ✅");
+          downloadCourse();
+        } else {
+          alert("Payment Failed ❌");
+        }
+      },
+    };
 
-          const result = await verify.json();
-
-          console.log("VERIFY RESPONSE:", result); // ✅ DEBUG
-
-          if (result.success) {
-            alert("Payment Successful ✅");
-            downloadCourse();
-          } else {
-            alert("Payment Failed ❌");
-          }
-        },
-      };
-
-      const rzp = new window.Razorpay(options);
-      rzp.open();
-
-    } catch (err) {
-      console.log(err);
-      alert("Something went wrong ❌");
-    }
+    const rzp = new window.Razorpay(options);
+    rzp.open();
   };
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        backgroundColor: "#f9fafb",
-        padding: "60px 40px",
-      }}
-    >
-      <div style={{ textAlign: "center", marginBottom: "50px" }}>
-        <h1 style={{ fontSize: "40px", fontWeight: "bold" }}>
-          Web Development Courses 🚀
-        </h1>
-        <p>Start learning and upgrade your skills</p>
-      </div>
+    <main style={{ padding: "60px 20px", background: "#f3f4f6" }}>
+      <h1 style={{ textAlign: "center", fontSize: "40px" }}>
+        Web Development Courses 🚀
+      </h1>
 
-      <div style={{ maxWidth: "600px", margin: "0 auto" }}>
-        <BlogCard
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+          gap: "20px",
+          marginTop: "50px",
+          maxWidth: "1000px",
+          marginInline: "auto",
+        }}
+      >
+        {/* ✅ HTML COURSE */}
+        <CourseCard
           title="HTML Course"
-          desc="Complete HTML basic notes"
-          buttonText={user ? "Buy Now ₹1 💰" : "Login Required 🔒"}
-          available={!!user}
+          desc="Learn HTML from basic to advanced"
+          price="₹1"
+          active={true}
+          user={user}
           onClick={handlePayment}
+        />
+
+        {/* 🚧 CSS COURSE */}
+        <CourseCard
+          title="CSS Course"
+          desc="Master CSS layouts, flexbox & grid"
+          price="Coming Soon 🚧"
+          active={false}
+        />
+
+        {/* 🚧 JS COURSE */}
+        <CourseCard
+          title="JavaScript Course"
+          desc="Learn JS, DOM, and real projects"
+          price="Coming Soon 🚧"
+          active={false}
         />
       </div>
     </main>
   );
 }
 
-
-// ✅ CARD COMPONENT
-function BlogCard({ title, desc, buttonText, available, onClick }) {
+// 🔥 CARD COMPONENT
+function CourseCard({ title, desc, price, active, user, onClick }) {
   return (
     <div
       style={{
         background: "#fff",
-        padding: "30px",
-        borderRadius: "10px",
-        boxShadow: "0 10px 20px rgba(0,0,0,0.1)",
+        padding: "25px",
+        borderRadius: "15px",
+        boxShadow: "0 8px 20px rgba(0,0,0,0.1)",
+        transition: "0.3s",
       }}
     >
       <h2>{title}</h2>
-      <p>{desc}</p>
+      <p style={{ margin: "10px 0" }}>{desc}</p>
+
+      <h3 style={{ marginTop: "10px" }}>{price}</h3>
 
       <button
-        onClick={available ? onClick : null}
-        disabled={!available}
+        onClick={active && user ? onClick : null}
+        disabled={!active || !user}
         style={{
           marginTop: "20px",
-          padding: "10px 20px",
-          background: available ? "blue" : "gray",
-          color: "#fff",
+          width: "100%",
+          padding: "12px",
+          borderRadius: "8px",
           border: "none",
-          cursor: available ? "pointer" : "not-allowed",
+          background: active
+            ? user
+              ? "#2563eb"
+              : "#9ca3af"
+            : "#e5e7eb",
+          color: active ? "#fff" : "#000",
+          cursor: active && user ? "pointer" : "not-allowed",
         }}
       >
-        {buttonText}
+        {!active
+          ? "Coming Soon 🚧"
+          : user
+          ? `Buy Now ${price} 💰`
+          : "Login Required 🔒"}
       </button>
     </div>
   );
