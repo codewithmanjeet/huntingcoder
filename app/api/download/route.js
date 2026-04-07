@@ -32,12 +32,9 @@ export async function POST(req) {
       return Response.json({ error: "Course required" }, { status: 400 });
     }
 
-    // 🔒 COURSE VALIDATION + FILE MAP
+    // 🔒 COURSE VALIDATION + REAL FILE PATH
     const courseFiles = {
-      HTML: "course/html-course.zip",
-      // future:
-      // CSS: "course/css-course.zip",
-      // JS: "course/js-course.zip",
+      HTML: "course.zip", // ✅ EXACT FILE NAME (NO FOLDER)
     };
 
     const filePath = courseFiles[course];
@@ -46,7 +43,7 @@ export async function POST(req) {
       return Response.json({ error: "Invalid course" }, { status: 400 });
     }
 
-    // 🔐 PURCHASE CHECK (USE user_id 🔥)
+    // 🔐 PURCHASE CHECK (user_id)
     const { data: purchase, error: purchaseError } = await supabase
       .from("purchases")
       .select("id")
@@ -58,13 +55,14 @@ export async function POST(req) {
       return Response.json({ error: "Not purchased ❌" }, { status: 403 });
     }
 
-    // 🔥 SIGNED URL (SHORT EXPIRY)
+    // 🔥 SIGNED URL (WORKING)
     const { data: file, error: fileError } = await supabase.storage
       .from("courses")
-      .createSignedUrl(filePath, 30); // ⏱️ 30 sec
+      .createSignedUrl(filePath, 60); // ⏱️ 60 sec
 
     if (fileError || !file) {
-      return Response.json({ error: "File error" }, { status: 500 });
+      console.log("FILE ERROR:", fileError);
+      return Response.json({ error: "File not found" }, { status: 500 });
     }
 
     return Response.json({ url: file.signedUrl });
