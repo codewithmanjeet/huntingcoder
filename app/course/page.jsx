@@ -11,7 +11,6 @@ export default function CoursePage() {
 
   const [user, setUser] = useState(null);
 
-  // ✅ LOGIN CHECK
   useEffect(() => {
     const getUser = async () => {
       const {
@@ -31,38 +30,6 @@ export default function CoursePage() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  // 🔥 DOWNLOAD FUNCTION
-  const downloadCourse = async () => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session) {
-      alert("Please login first ❌");
-      return;
-    }
-
-    const res = await fetch("/api/download", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({
-        course: "HTML",
-      }),
-    });
-
-    const data = await res.json();
-
-    if (data.url) {
-      window.location.href = data.url;
-    } else {
-      alert(data.error);
-    }
-  };
-
-  // 🔥 PAYMENT FUNCTION
   const handlePayment = async () => {
     if (!user) {
       alert("Login first ❌");
@@ -80,37 +47,8 @@ export default function CoursePage() {
       amount: data.amount,
       currency: "INR",
       order_id: data.id,
-
-      handler: async function (response) {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        if (!session) {
-          alert("Session expired ❌");
-          return;
-        }
-
-        const verify = await fetch("/api/verify-payment", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
-            ...response,
-            course: "HTML",
-          }),
-        });
-
-        const result = await verify.json();
-
-        if (result.success) {
-          alert("Payment Successful ✅");
-          downloadCourse();
-        } else {
-          alert("Payment Failed ❌");
-        }
+      handler: function () {
+        alert("Payment Success ✅");
       },
     };
 
@@ -119,44 +57,54 @@ export default function CoursePage() {
   };
 
   return (
-    <main style={{ padding: "60px 20px", background: "#f3f4f6" }}>
-      <h1 style={{ textAlign: "center", fontSize: "40px" }}>
-        Web Development Courses 🚀
+    <main
+      style={{
+        minHeight: "100vh",
+        background:
+          "linear-gradient(135deg, #0f172a, #1e293b, #020617)",
+        color: "#fff",
+        padding: "60px 20px",
+      }}
+    >
+      <h1
+        style={{
+          textAlign: "center",
+          fontSize: "42px",
+          marginBottom: "40px",
+        }}
+      >
+        🚀 Web Development Courses
       </h1>
 
       <div
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-          gap: "20px",
-          marginTop: "50px",
+          gap: "25px",
           maxWidth: "1000px",
-          marginInline: "auto",
+          margin: "auto",
         }}
       >
-        {/* ✅ HTML COURSE */}
         <CourseCard
           title="HTML Course"
-          desc="Learn HTML from basic to advanced"
+          desc="Learn HTML from scratch with real projects"
           price="₹1"
           active={true}
           user={user}
           onClick={handlePayment}
         />
 
-        {/* 🚧 CSS COURSE */}
         <CourseCard
           title="CSS Course"
-          desc="Master CSS layouts, flexbox & grid"
-          price="Coming Soon 🚧"
+          desc="Master Flexbox, Grid & animations"
+          price="Coming Soon"
           active={false}
         />
 
-        {/* 🚧 JS COURSE */}
         <CourseCard
           title="JavaScript Course"
-          desc="Learn JS, DOM, and real projects"
-          price="Coming Soon 🚧"
+          desc="DOM, ES6, Projects & more"
+          price="Coming Soon"
           active={false}
         />
       </div>
@@ -164,22 +112,28 @@ export default function CoursePage() {
   );
 }
 
-// 🔥 CARD COMPONENT
 function CourseCard({ title, desc, price, active, user, onClick }) {
   return (
     <div
       style={{
-        background: "#fff",
+        background: "rgba(255,255,255,0.05)",
+        border: "1px solid rgba(255,255,255,0.1)",
+        backdropFilter: "blur(10px)",
         padding: "25px",
         borderRadius: "15px",
-        boxShadow: "0 8px 20px rgba(0,0,0,0.1)",
         transition: "0.3s",
       }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = "scale(1.05)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = "scale(1)";
+      }}
     >
-      <h2>{title}</h2>
-      <p style={{ margin: "10px 0" }}>{desc}</p>
+      <h2 style={{ fontSize: "22px" }}>{title}</h2>
+      <p style={{ opacity: 0.7, margin: "10px 0" }}>{desc}</p>
 
-      <h3 style={{ marginTop: "10px" }}>{price}</h3>
+      <h3 style={{ marginTop: "10px", color: "#38bdf8" }}>{price}</h3>
 
       <button
         onClick={active && user ? onClick : null}
@@ -188,21 +142,22 @@ function CourseCard({ title, desc, price, active, user, onClick }) {
           marginTop: "20px",
           width: "100%",
           padding: "12px",
-          borderRadius: "8px",
+          borderRadius: "10px",
           border: "none",
           background: active
             ? user
-              ? "#2563eb"
-              : "#9ca3af"
-            : "#e5e7eb",
-          color: active ? "#fff" : "#000",
+              ? "linear-gradient(90deg, #3b82f6, #06b6d4)"
+              : "#475569"
+            : "#1e293b",
+          color: "#fff",
           cursor: active && user ? "pointer" : "not-allowed",
+          fontWeight: "bold",
         }}
       >
         {!active
           ? "Coming Soon 🚧"
           : user
-          ? `Buy Now ${price} 💰`
+          ? `Buy Now ${price}`
           : "Login Required 🔒"}
       </button>
     </div>
