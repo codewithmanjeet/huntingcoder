@@ -11,7 +11,7 @@ export default function CoursePage() {
 
   const [user, setUser] = useState(null);
 
-  // ✅ LOGIN CHECK
+  // ✅ LOGIN CHECK (UNCHANGED)
   useEffect(() => {
     const getUser = async () => {
       const {
@@ -32,13 +32,11 @@ export default function CoursePage() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  // 🔥 DOWNLOAD FUNCTION
+  // 🔥 DOWNLOAD FUNCTION (UNCHANGED)
   const downloadCourse = async () => {
     const {
       data: { session },
     } = await supabase.auth.getSession();
-
-    console.log("DOWNLOAD TOKEN:", session?.access_token); // ✅ DEBUG
 
     if (!session) {
       alert("Please login first ❌");
@@ -58,8 +56,6 @@ export default function CoursePage() {
 
     const data = await res.json();
 
-    console.log("DOWNLOAD RESPONSE:", data); // ✅ DEBUG
-
     if (data.url) {
       window.location.href = data.url;
     } else {
@@ -67,7 +63,7 @@ export default function CoursePage() {
     }
   };
 
-  // 🔥 PAYMENT FUNCTION
+  // 🔥 PAYMENT FUNCTION (UNCHANGED)
   const handlePayment = async () => {
     if (!user) {
       alert("Login first ❌");
@@ -92,9 +88,6 @@ export default function CoursePage() {
             data: { session },
           } = await supabase.auth.getSession();
 
-          // ✅ 🔥 TOKEN LOG
-          console.log("VERIFY TOKEN:", session?.access_token);
-
           if (!session) {
             alert("Session expired ❌");
             return;
@@ -113,8 +106,6 @@ export default function CoursePage() {
           });
 
           const result = await verify.json();
-
-          console.log("VERIFY RESPONSE:", result); // ✅ DEBUG
 
           if (result.success) {
             alert("Payment Successful ✅");
@@ -137,54 +128,108 @@ export default function CoursePage() {
     <main
       style={{
         minHeight: "100vh",
-        backgroundColor: "#f9fafb",
-        padding: "60px 40px",
+        background: "linear-gradient(135deg, #0f172a, #1e293b)",
+        padding: "60px 20px",
+        color: "#fff",
       }}
     >
-      <div style={{ textAlign: "center", marginBottom: "50px" }}>
-        <h1 style={{ fontSize: "40px", fontWeight: "bold" }}>
+      {/* HEADER */}
+      <div style={{ textAlign: "center", marginBottom: "60px" }}>
+        <h1 style={{ fontSize: "42px", fontWeight: "bold" }}>
           Web Development Courses 🚀
         </h1>
-        <p>Start learning and upgrade your skills</p>
+        <p style={{ color: "#94a3b8" }}>
+          Start learning and upgrade your skills
+        </p>
       </div>
 
-      <div style={{ maxWidth: "600px", margin: "0 auto" }}>
-        <BlogCard
+      {/* CARD GRID */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+          gap: "25px",
+          maxWidth: "1000px",
+          margin: "0 auto",
+        }}
+      >
+        {/* HTML CARD (WORKING) */}
+        <CourseCard
           title="HTML Course"
           desc="Complete HTML basic notes"
-          buttonText={user ? "Buy Now ₹1 💰" : "Login Required 🔒"}
-          available={!!user}
+          price="₹1"
+          active={!!user}
+          buttonText={user ? "Buy Now 💰" : "Login Required 🔒"}
           onClick={handlePayment}
+        />
+
+        {/* CSS CARD */}
+        <CourseCard
+          title="CSS Course"
+          desc="Design your website beautifully"
+          price="Coming Soon"
+          active={false}
+          buttonText="Coming Soon ⏳"
+        />
+
+        {/* JS CARD */}
+        <CourseCard
+          title="JavaScript Course"
+          desc="Make your website dynamic"
+          price="Coming Soon"
+          active={false}
+          buttonText="Coming Soon ⏳"
         />
       </div>
     </main>
   );
 }
 
-// ✅ CARD COMPONENT
-function BlogCard({ title, desc, buttonText, available, onClick }) {
+// ✅ MODERN CARD COMPONENT
+function CourseCard({ title, desc, price, buttonText, active, onClick }) {
   return (
     <div
       style={{
-        background: "#fff",
-        padding: "30px",
-        borderRadius: "10px",
-        boxShadow: "0 10px 20px rgba(0,0,0,0.1)",
+        background: "rgba(255,255,255,0.05)",
+        border: "1px solid rgba(255,255,255,0.1)",
+        backdropFilter: "blur(10px)",
+        padding: "25px",
+        borderRadius: "16px",
+        transition: "0.3s",
+        boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
       }}
     >
-      <h2>{title}</h2>
-      <p>{desc}</p>
+      <h2 style={{ fontSize: "22px", marginBottom: "10px" }}>{title}</h2>
+
+      <p style={{ color: "#cbd5f5", fontSize: "14px" }}>{desc}</p>
+
+      <p
+        style={{
+          marginTop: "15px",
+          fontWeight: "bold",
+          fontSize: "18px",
+          color: "#38bdf8",
+        }}
+      >
+        {price}
+      </p>
 
       <button
-        onClick={available ? onClick : null}
-        disabled={!available}
+        onClick={active ? onClick : null}
+        disabled={!active}
         style={{
           marginTop: "20px",
-          padding: "10px 20px",
-          background: available ? "blue" : "gray",
-          color: "#fff",
+          width: "100%",
+          padding: "12px",
+          borderRadius: "10px",
           border: "none",
-          cursor: available ? "pointer" : "not-allowed",
+          background: active
+            ? "linear-gradient(135deg, #3b82f6, #06b6d4)"
+            : "#475569",
+          color: "#fff",
+          fontWeight: "bold",
+          cursor: active ? "pointer" : "not-allowed",
+          transition: "0.3s",
         }}
       >
         {buttonText}
