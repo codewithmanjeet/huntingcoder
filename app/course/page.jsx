@@ -156,7 +156,7 @@ export default function CoursePage() {
         {/* HTML CARD (WORKING) */}
         <CourseCard
           title="HTML Course"
-          desc="Complete HTML basic notes"
+          desc="You can pay a small amount to purchase this course and download a ZIP file. Inside, you will get a complete cheat sheet for this course."
           price="₹1"
           active={!!user}
           buttonText={user ? "Buy Now 💰" : "Login Required 🔒"}
@@ -166,7 +166,7 @@ export default function CoursePage() {
         {/* CSS CARD */}
         <CourseCard
           title="CSS Course"
-          desc="Design your website beautifully"
+          desc="This course is not available right now. Once it becomes available, the Coming Soon label will be removed and the Buy Now button will be activated"
           price="Coming Soon"
           active={false}
           buttonText="Coming Soon ⏳"
@@ -175,7 +175,7 @@ export default function CoursePage() {
         {/* JS CARD */}
         <CourseCard
           title="JavaScript Course"
-          desc="Make your website dynamic"
+          desc="This course is not available right now. Once it becomes available, the 'Coming Soon' label will be removed and the 'Buy Now' button will be activated."
           price="Coming Soon"
           active={false}
           buttonText="Coming Soon ⏳"
