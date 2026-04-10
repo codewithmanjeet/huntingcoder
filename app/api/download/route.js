@@ -25,6 +25,7 @@ export async function POST(req) {
 
     const { course } = await req.json();
 
+    // ✅ Check purchase
     const { data } = await supabase
       .from("purchases")
       .select("*")
@@ -32,18 +33,30 @@ export async function POST(req) {
       .eq("course", course);
 
     if (!data || data.length === 0) {
-      return Response.json({ error: "Not purchased ❌" });
+      return Response.json({ error: "Not purchased" });
     }
 
-    // ✅ FINAL CORRECT FILE PATH
+    // 🔥 Dynamic file mapping (more secure)
+    const fileMap = {
+      html: "html-course.zip",
+      css: "css-course.zip",
+      js: "js-course.zip",
+    };
+
+    const fileName = fileMap[course];
+
+    if (!fileName) {
+      return Response.json({ error: "Invalid course" });
+    }
+
+    // ✅ Signed URL (short expiry)
     const { data: file } = await supabase.storage
       .from("courses")
-      .createSignedUrl("course.zip", 60);
+      .createSignedUrl(fileName, 30); // 30 sec only
 
     return Response.json({ url: file.signedUrl });
 
   } catch (err) {
-    console.log("DOWNLOAD ERROR:", err);
     return Response.json({ error: err.message });
   }
 }
